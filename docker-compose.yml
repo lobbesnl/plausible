@@ -1,15 +1,36 @@
 version: "3.3"
 services:
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    restart: always
+    volumes:
+      - ./mail-data:/data
+    ports:
+      - 8025:8025
+      - 1025:1025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATA_FILE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    profiles: [ "mail" ]
+
   mail:
     image: bytemark/smtp
     restart: always
+    environment:
+      RELAY_HOST: mailpit
+      RELAY_PORT: 1025
+      RELAY_USERNAME: hello@example.com
 
   plausible_db:
     # supported versions are 13, 14, and 15
     image: postgres:14-alpine
     restart: always
     volumes:
-      - db-data:/var/lib/postgresql/data
+#      - db-data:/var/lib/postgresql/data
+      - ./db-volumes/var/lib/postgresql/data:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=postgres
 
@@ -17,7 +38,8 @@ services:
     image: clickhouse/clickhouse-server:23.3.7.5-alpine
     restart: always
     volumes:
-      - event-data:/var/lib/clickhouse
+#      - event-data:/var/lib/clickhouse
+      - ./db-volumes/var/lib/clickhouse:/var/lib/clickhouse
       - ./clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/logging.xml:ro
       - ./clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/logging.xml:ro
     ulimits:
