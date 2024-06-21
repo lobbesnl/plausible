@@ -1,32 +1,32 @@
-version: "3.3"
 services:
-  mailpit:
-    image: axllent/mailpit
-    container_name: mailpit
-    restart: always
-    volumes:
-      - ./mail-data:/data
-    ports:
-      - "8025:8025"
-      - "1025:1025"
-    environment:
-      MP_MAX_MESSAGES: 5000
-      MP_DATA_FILE: /data/mailpit.db
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
-    profiles: [ "mail" ]
-
-  mail:
-    image: bytemark/smtp
-    restart: always
-    environment:
-      RELAY_HOST: mailpit
-      RELAY_PORT: 1025
-      RELAY_USERNAME: hello@example.com
+#  mailpit:
+#    image: axllent/mailpit
+#    container_name: mailpit
+#    restart: always
+#    volumes:
+#      - ./mail-data:/data
+#    ports:
+#      - "8025:8025"
+#      - "1025:1025"
+#    environment:
+#      MP_MAX_MESSAGES: 5000
+#      MP_DATA_FILE: /data/mailpit.db
+#      MP_SMTP_AUTH_ACCEPT_ANY: 1
+#      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+#    profiles: [ "mail" ]
+#
+#  mail:
+#    image: bytemark/smtp
+#    restart: always
+#    environment:
+#      RELAY_HOST: mailpit
+#      RELAY_PORT: 1025
+#      RELAY_USERNAME: hello@example.com
 
   plausible_db:
-    # supported versions are 13, 14, and 15
-    image: postgres:14-alpine
+    # Plausible v2.1.1 was tested against PostgreSQL versions 15 and 16
+    # https://github.com/plausible/analytics/blob/v2.1.1/.github/workflows/elixir.yml#L21-L32
+    image: postgres:16-alpine
     restart: always
     volumes:
 #      - db-data:/var/lib/postgresql/data
@@ -37,9 +37,10 @@ services:
 #      - 5432:5432
 
   plausible_events_db:
-    image: clickhouse/clickhouse-server:23.3.7.5-alpine
+    image: clickhouse/clickhouse-server:24.3.3.102-alpine
     restart: always
     volumes:
+      - event-logs:/var/log/clickhouse-server
 #      - event-data:/var/lib/clickhouse
       - ./db-volumes/var/lib/clickhouse:/var/lib/clickhouse
       - ./clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/logging.xml:ro
@@ -50,15 +51,14 @@ services:
         hard: 262144
 
   plausible:
-    image: ghcr.io/plausible/community-edition:v2.1.0-rc.0
+    image: ghcr.io/plausible/community-edition:v2.1.1
     restart: always
     command: sh -c "sleep 10 && /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
     depends_on:
       - plausible_db
       - plausible_events_db
-      - mail
     ports:
-      - 8000:8000
+      - "8000:8000"
     env_file:
       - plausible-conf.env
 
@@ -66,4 +66,6 @@ volumes:
   db-data:
     driver: local
   event-data:
+    driver: local
+  event-logs:
     driver: local
