@@ -4,3 +4,5 @@
 *.sublime-workspace
 *.vscode/
 .vscode/
+db-volumes
+_db-volumes
