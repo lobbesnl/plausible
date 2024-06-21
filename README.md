@@ -297,6 +297,29 @@ TOTP_VAULT_KEY=dsxvbn3jxDd16az2QpsX5B8O+llxjQ2SJE2i5Bzx38I=
 
 > [`TOTP_VAULT_KEY`](#totp_vault_key) needs to be Base64 encoded 32 bytes.
 
+## API
+
+### Remove the Rate Limit
+```shell
+# connect to the container with docker
+docker exec -it <container_name_psql_db> psql -U postgres
+
+# list databases
+\l
+
+# Switching Databases
+\c api_keys
+
+# Expanded display
+\x
+
+# List the data
+SELECT * FROM public.api_keys;
+
+# Update the field with max value of integer
+UPDATE public.api_keys SET hourly_request_limit = 2147483647;
+```
+
 ### Optional
 
 <details>
