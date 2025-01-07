@@ -1,5 +1,6 @@
 .idea
 .env
+plausible-conf.env
 *.sublime-project
 *.sublime-workspace
 *.vscode/
