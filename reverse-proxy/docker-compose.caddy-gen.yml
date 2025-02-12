@@ -3,6 +3,11 @@ services:
   caddy-gen:
     container_name: caddy-gen
     image: "wemakeservices/caddy-gen:latest"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: always
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
