@@ -1,32 +1,6 @@
 services:
-#  mailpit:
-#    image: axllent/mailpit
-#    container_name: mailpit
-#    restart: always
-#    volumes:
-#      - ./mail-data:/data
-#    ports:
-#      - "8025:8025"
-#      - "1025:1025"
-#    environment:
-#      MP_MAX_MESSAGES: 5000
-#      MP_DATA_FILE: /data/mailpit.db
-#      MP_SMTP_AUTH_ACCEPT_ANY: 1
-#      MP_SMTP_AUTH_ALLOW_INSECURE: 1
-#    profiles: [ "mail" ]
-#
-#  mail:
-#    image: bytemark/smtp
-#    restart: always
-#    environment:
-#      RELAY_HOST: mailpit
-#      RELAY_PORT: 1025
-#      RELAY_USERNAME: hello@example.com
-
   plausible_db:
-    # Plausible v2.1.1 was tested against PostgreSQL versions 15 and 16
-    # https://github.com/plausible/analytics/blob/v2.1.1/.github/workflows/elixir.yml#L21-L32
-    image: postgres:14-alpine
+    image: postgres:16-alpine
     restart: always
     volumes:
 #      - db-data:/var/lib/postgresql/data
@@ -38,26 +12,42 @@ services:
       start_period: 1m
 
   plausible_events_db:
-    image: clickhouse/clickhouse-server:24.3.3.102-alpine
+    image: clickhouse/clickhouse-server:24.12-alpine
     restart: always
     volumes:
       - event-logs:/var/log/clickhouse-server
 #      - event-data:/var/lib/clickhouse
       - ./db-volumes/var/lib/clickhouse:/var/lib/clickhouse
+      - ./clickhouse/ipv4-only.xml:/etc/clickhouse-server/config.d/ipv4-only.xml:ro
+      - ./clickhouse/low-resources.xml:/etc/clickhouse-server/config.d/low-resources.xml:ro
+      - ./clickhouse/default-profile-low-resources-overrides.xml:/etc/clickhouse-server/users.d/default-profile-low-resources-overrides.xml:ro
       - ./clickhouse/clickhouse-config.xml:/etc/clickhouse-server/config.d/logging.xml:ro
       - ./clickhouse/clickhouse-user-config.xml:/etc/clickhouse-server/users.d/logging.xml:ro
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
+    environment:
+      - CLICKHOUSE_SKIP_USER_SETUP=1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 -O - http://127.0.0.1:8123/ping || exit 1",
+        ]
+      start_period: 1m
 
   plausible:
-    image: ghcr.io/plausible/community-edition:v2.1.5
+    image: ghcr.io/plausible/community-edition:v3.2.0
     restart: always
     command: sh -c "/entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
     depends_on:
       - plausible_db
       - plausible_events_db
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     ports:
       - "8000:8000"
     env_file:
